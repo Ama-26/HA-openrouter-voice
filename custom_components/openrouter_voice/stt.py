@@ -102,7 +102,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
 
     @property
     def supported_sample_rates(self) -> list[AudioSampleRates]:
-        return [AudioSampleRates.SAMPLERATE_16000, AudioSampleRates.SAMPLERATE_24000]
+        return [AudioSampleRates.SAMPLERATE_16000]
 
     @property
     def supported_channels(self) -> list[AudioChannels]:
