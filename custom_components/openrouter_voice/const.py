@@ -1,0 +1,160 @@
+"""Constants for OpenRouter Voice — TTS + STT, Multi-Modell, Diagnostics."""
+
+DOMAIN = "openrouter_voice"
+
+# ── Config Keys ──────────────────────────────────────────────────────────
+
+CONF_VOICE = "voice"
+CONF_TTS_MODEL = "tts_model"
+CONF_STT_MODEL = "stt_model"
+
+# ── API ──────────────────────────────────────────────────────────────────
+
+TTS_API_URL = "https://openrouter.ai/api/v1/audio/speech"
+STT_API_URL = "https://openrouter.ai/api/v1/audio/transcriptions"
+DEFAULT_TIMEOUT = 30
+MAX_RETRIES = 3
+RETRY_BACKOFF = 2.0
+
+# ── TTS Models ───────────────────────────────────────────────────────────
+
+DEFAULT_TTS_MODEL = "google/gemini-3.1-flash-tts-preview"
+DEFAULT_TTS_VOICE = "fenrir"
+
+TTS_MODELS: dict[str, dict] = {
+    "google/gemini-3.1-flash-tts-preview": {
+        "name": "Google Gemini 3.1 Flash TTS",
+        "voices": ["fenrir", "aoede", "charon", "kore", "puck", "zephyr"],
+        "format": "pcm",
+        "sample_rate": 24000,
+        "description": "Schnell, natürlich, mehrsprachig (auch Deutsch)",
+    },
+    "openai/gpt-4o-mini-tts-2025-12-15": {
+        "name": "OpenAI GPT-4o Mini TTS",
+        "voices": ["alloy", "echo", "fable", "nova", "onyx", "sage", "shimmer"],
+        "format": "pcm",
+        "sample_rate": 24000,
+        "description": "OpenAI's kompaktes TTS-Modell",
+    },
+    "x-ai/grok-voice-tts-1.0": {
+        "name": "xAI Grok Voice TTS",
+        "voices": ["male_01", "female_01", "male_02", "female_02"],
+        "format": "pcm",
+        "sample_rate": 24000,
+        "description": "xAI's Grok Voice — expressive Sprachausgabe",
+    },
+}
+
+# ── STT Models ───────────────────────────────────────────────────────────
+
+DEFAULT_STT_MODEL = "deepgram/nova-2"
+
+STT_MODELS: dict[str, dict] = {
+    "deepgram/nova-2": {
+        "name": "Deepgram Nova 2",
+        "languages": [
+            "de", "en", "fr", "es", "it", "pt", "nl", "pl", "ru",
+            "ja", "ko", "zh", "hi", "ar", "tr", "sv", "da", "no",
+        ],
+        "description": "Beste Qualität, multi-language, niedrige Latenz",
+    },
+    "openai/whisper-1": {
+        "name": "OpenAI Whisper",
+        "languages": [
+            "de", "en", "fr", "es", "it", "pt", "nl", "pl", "ru",
+            "ja", "ko", "zh", "ar", "sv",
+        ],
+        "description": "OpenAI's ASR-Modell, zuverlässig und breit unterstützt",
+    },
+    "openai/whisper-large-v3": {
+        "name": "OpenAI Whisper Large v3",
+        "languages": [
+            "de", "en", "fr", "es", "it", "pt", "nl", "pl", "ru",
+            "ja", "ko", "zh", "hi", "ar", "tr", "sv", "da", "no",
+        ],
+        "description": "Größtes Whisper-Modell, höchste Genauigkeit",
+    },
+}
+
+
+# ── Helpers ──────────────────────────────────────────────────────────────
+
+def get_voices_for_model(model_id: str) -> list[str]:
+    model_cfg = TTS_MODELS.get(model_id)
+    return model_cfg["voices"] if model_cfg else [DEFAULT_TTS_VOICE]
+
+
+def get_tts_format(model_id: str) -> str:
+    model_cfg = TTS_MODELS.get(model_id)
+    return model_cfg["format"] if model_cfg else "pcm"
+
+
+def get_sample_rate(model_id: str) -> int:
+    model_cfg = TTS_MODELS.get(model_id)
+    return model_cfg["sample_rate"] if model_cfg else 24000
+
+
+def get_stt_languages(model_id: str) -> list[str]:
+    model_cfg = STT_MODELS.get(model_id)
+    return model_cfg["languages"] if model_cfg else ["de", "en"]
+
+
+# ── Error Classification ─────────────────────────────────────────────────
+
+class VoiceError(Exception):
+    """Basis-Klasse für Voice-Fehler (TTS + STT)."""
+
+    def __init__(self, message: str, code: str, http_status: int = 0) -> None:
+        super().__init__(message)
+        self.code = code
+        self.http_status = http_status
+
+
+class AuthError(VoiceError):
+    """API-Key ungültig oder fehlt."""
+
+
+class RateLimitError(VoiceError):
+    """Rate-Limit erreicht."""
+
+
+class BadRequestError(VoiceError):
+    """Ungültige Parameter."""
+
+
+class ServerError(VoiceError):
+    """OpenRouter-Server-Fehler."""
+
+
+class TimeoutError_(VoiceError):
+    """Zeitüberschreitung."""
+
+
+def classify_error(http_status: int, response_body: str = "") -> VoiceError:
+    """Klassifiziert einen HTTP-Fehler."""
+    msg = response_body[:200] if response_body else f"HTTP {http_status}"
+
+    if http_status == 401:
+        return AuthError(
+            "API-Key ungültig. Prüfe deinen OpenRouter API-Key.",
+            code="auth_invalid_key", http_status=http_status,
+        )
+    if http_status == 403:
+        return AuthError(
+            "Keine Berechtigung. Reicht dein OpenRouter-Guthaben?",
+            code="auth_forbidden", http_status=http_status,
+        )
+    if http_status == 429:
+        return RateLimitError(
+            "Rate-Limit erreicht. Warte kurz.",
+            code="rate_limited", http_status=http_status,
+        )
+    if http_status == 400:
+        return BadRequestError(
+            f"Ungültige Anfrage: {msg}", code="bad_request", http_status=http_status,
+        )
+    if http_status >= 500:
+        return ServerError(
+            f"OpenRouter-Server-Fehler: {msg}", code="server_error", http_status=http_status,
+        )
+    return VoiceError(f"Unbekannter Fehler: {msg}", code="unknown", http_status=http_status)

@@ -1,0 +1,12 @@
+{
+  "domain": "openrouter_voice",
+  "name": "OpenRouter Voice",
+  "codeowners": ["@Ama-26"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/Ama-26/openrouter-voice",
+  "issue_tracker": "https://github.com/Ama-26/openrouter-voice/issues",
+  "iot_class": "cloud_polling",
+  "requirements": [],
+  "version": "1.0.0"
+}
