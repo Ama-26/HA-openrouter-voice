@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import struct
 import time
 from typing import Any
 
@@ -124,8 +125,36 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
             audio_chunks.append(chunk)
         wav_data = b"".join(audio_chunks)
 
+        _LOGGER.warning(
+            "STT audio received: %d bytes, metadata: format=%s codec=%s rate=%s bit=%s ch=%s lang=%s",
+            len(wav_data),
+            metadata.format, metadata.codec, metadata.sample_rate,
+            metadata.bit_rate, metadata.channel, metadata.language,
+        )
+        # Dump first 44 bytes (WAV header) as hex
+        if len(wav_data) >= 44:
+            _LOGGER.warning("STT WAV header: %s", wav_data[:44].hex())
+
         if not wav_data:
             return SpeechResult(None, SpeechResultState.ERROR)
+
+        # Voice PE sends raw PCM without WAV header — add one if missing
+        if not wav_data[:4] == b"RIFF":
+            sample_rate = int(metadata.sample_rate.value if hasattr(metadata.sample_rate, 'value') else metadata.sample_rate)
+            channels = int(metadata.channel.value if hasattr(metadata.channel, 'value') else metadata.channel)
+            bits = int(metadata.bit_rate.value if hasattr(metadata.bit_rate, 'value') else metadata.bit_rate)
+            data_size = len(wav_data)
+            byte_rate = sample_rate * channels * (bits // 8)
+            block_align = channels * (bits // 8)
+            header = struct.pack(
+                "<4sI4s4sIHHIIHH4sI",
+                b"RIFF", 36 + data_size, b"WAVE",
+                b"fmt ", 16, 1, channels, sample_rate,
+                byte_rate, block_align, bits,
+                b"data", data_size,
+            )
+            wav_data = header + wav_data
+            _LOGGER.debug("STT: Added WAV header, total=%d bytes", len(wav_data))
 
         try:
             text = await self._call_openrouter_stt(wav_data)
