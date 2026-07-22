@@ -6,7 +6,6 @@ Uses `async_process_audio_stream` (streaming Audio) for HA 2025+.
 from __future__ import annotations
 
 import asyncio
-import base64
 import logging
 import time
 from typing import Any
@@ -144,30 +143,23 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
         return SpeechResult(text=text, result=SpeechResultState.SUCCESS)
 
     async def _call_openrouter_stt(self, wav_data: bytes) -> str:
-        """Send WAV audio to OpenRouter STT API (base64 JSON path).
+        """Send WAV audio to OpenRouter STT API (multipart form data).
 
         Returns transcribed text. Raises HomeAssistantError on failure.
         """
         client = get_async_client(self.hass)
         api_key: str = self._config_entry.data[CONF_API_KEY]
         model_id = self._stt_model
-        b64_audio = base64.b64encode(wav_data).decode("ascii")
         last_error: Exception | None = None
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 response = await client.post(
                     STT_API_URL,
-                    json={
-                        "model": model_id,
-                        "input_audio": {
-                            "data": b64_audio,
-                            "format": "wav",
-                        },
-                    },
+                    files={"file": ("audio.wav", wav_data, "audio/wav")},
+                    data={"model": model_id, "language": "de"},
                     headers={
                         "Authorization": f"Bearer {api_key}",
-                        "Content-Type": "application/json",
                         "HTTP-Referer": "https://home-assistant.io",
                         "X-Title": "Home Assistant",
                     },
@@ -185,6 +177,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
                     return text if text else ""
 
                 # ── Error handling ──────────────────────────────────────
+                _LOGGER.error("STT API %d response: %s", response.status_code, response.text[:500])
                 try:
                     err_body = response.json()
                     err_msg = err_body.get("error", {}).get("message", response.text[:200])

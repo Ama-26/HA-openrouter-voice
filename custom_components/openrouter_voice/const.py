@@ -45,31 +45,33 @@ TTS_MODELS: dict[str, dict] = {
     },
 }
 
-# ── STT Models ───────────────────────────────────────────────────────────
+# ── STT Models (Three tiers: good / medium / cheap) ──────────────────────
 
-DEFAULT_STT_MODEL = "deepgram/nova-3"
+DEFAULT_STT_MODEL = "qwen/qwen3-asr-flash-2026-02-10"  # Default = günstig
 
 STT_MODELS: dict[str, dict] = {
+    # ── Tier 1: Beste Qualität ──────────────────────────────────────────
     "deepgram/nova-3": {
-        "name": "Deepgram Nova 3",
-        "languages": [
-            "de", "en", "fr", "es", "it", "pt", "nl", "pl", "ru",
-            "ja", "ko", "zh", "hi", "ar", "tr", "sv", "da", "no",
-        ],
-        "description": "Beste Qualität, multi-language, niedrige Latenz",
+        "name": "Deepgram Nova 3 (Beste)",
+        "tier": "gut",
+        "languages": ["de", "en", "fr", "es", "it", "pt", "nl", "pl", "ru",
+                      "ja", "ko", "zh", "hi", "ar", "tr", "sv", "da", "no"],
+        "description": "Beste STT-Qualität, 30+ Sprachen, $0.0043/min",
     },
+    # ── Tier 2: Mittelklasse ────────────────────────────────────────────
+    "openai/whisper-large-v3": {
+        "name": "OpenAI Whisper Large v3 (Mittel)",
+        "tier": "mittel",
+        "languages": ["de", "en", "fr", "es", "it", "pt", "nl", "pl", "ru",
+                      "ja", "ko", "zh", "hi", "ar", "tr", "sv", "da", "no"],
+        "description": "Bewährt, 99+ Sprachen, $0.0015/min",
+    },
+    # ── Tier 3: Günstig ─────────────────────────────────────────────────
     "qwen/qwen3-asr-flash-2026-02-10": {
-        "name": "Qwen3 ASR Flash",
+        "name": "Qwen3 ASR Flash (Günstig)",
+        "tier": "günstig",
         "languages": ["de", "en", "fr", "es", "it", "pt", "ja", "ko", "zh", "ru", "ar"],
-        "description": "Günstigstes Modell ($0.000035/min), 11 Sprachen",
-    },
-    "nvidia/parakeet-tdt-0.6b-v3": {
-        "name": "NVIDIA Parakeet TDT v3",
-        "languages": [
-            "de", "en", "fr", "es", "it", "pt", "nl", "pl", "ru",
-            "ja", "ko", "zh", "hi", "ar",
-        ],
-        "description": "NVIDIAs 600M-Parameter STT, multilingual",
+        "description": "120x günstiger als Nova-3, $0.000035/min, 11 Sprachen",
     },
 }
 
