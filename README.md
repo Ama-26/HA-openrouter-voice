@@ -54,9 +54,9 @@ mv openrouter-voice/custom_components/openrouter_voice .
 
 | Model ID | Languages | Notes |
 |---|---|---|
-| `deepgram/nova-2` | de, en, fr, es, it, pt, nl, pl, ru, ja, ko, zh, hi, ar, tr, sv, da, no | Best quality, low latency |
-| `openai/whisper-1` | de, en, fr, es, it, pt, nl, pl, ru, ja, ko, zh, ar, sv | OpenAI's ASR model |
-| `openai/whisper-large-v3` | Full multi-language | Highest accuracy |
+| `deepgram/nova-3` | de, en, fr, es, it, pt, nl, pl, ru, ja, ko, zh, hi, ar, tr, sv, da, no | Best quality, low latency |
+| `qwen/qwen3-asr-flash-2026-02-10` | de, en, fr, es, it, pt, ja, ko, zh, ru, ar | Cheapest ($0.000035/min) |
+| `nvidia/parakeet-tdt-0.6b-v3` | de, en, fr, es, it, pt, nl, pl, ru, ja, ko, zh, hi, ar | NVIDIA 600M params |
 
 ## Using with Assist
 

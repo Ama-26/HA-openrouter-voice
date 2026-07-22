@@ -47,32 +47,29 @@ TTS_MODELS: dict[str, dict] = {
 
 # ── STT Models ───────────────────────────────────────────────────────────
 
-DEFAULT_STT_MODEL = "deepgram/nova-2"
+DEFAULT_STT_MODEL = "deepgram/nova-3"
 
 STT_MODELS: dict[str, dict] = {
-    "deepgram/nova-2": {
-        "name": "Deepgram Nova 2",
+    "deepgram/nova-3": {
+        "name": "Deepgram Nova 3",
         "languages": [
             "de", "en", "fr", "es", "it", "pt", "nl", "pl", "ru",
             "ja", "ko", "zh", "hi", "ar", "tr", "sv", "da", "no",
         ],
         "description": "Beste Qualität, multi-language, niedrige Latenz",
     },
-    "openai/whisper-1": {
-        "name": "OpenAI Whisper",
-        "languages": [
-            "de", "en", "fr", "es", "it", "pt", "nl", "pl", "ru",
-            "ja", "ko", "zh", "ar", "sv",
-        ],
-        "description": "OpenAI's ASR-Modell, zuverlässig und breit unterstützt",
+    "qwen/qwen3-asr-flash-2026-02-10": {
+        "name": "Qwen3 ASR Flash",
+        "languages": ["de", "en", "fr", "es", "it", "pt", "ja", "ko", "zh", "ru", "ar"],
+        "description": "Günstigstes Modell ($0.000035/min), 11 Sprachen",
     },
-    "openai/whisper-large-v3": {
-        "name": "OpenAI Whisper Large v3",
+    "nvidia/parakeet-tdt-0.6b-v3": {
+        "name": "NVIDIA Parakeet TDT v3",
         "languages": [
             "de", "en", "fr", "es", "it", "pt", "nl", "pl", "ru",
-            "ja", "ko", "zh", "hi", "ar", "tr", "sv", "da", "no",
+            "ja", "ko", "zh", "hi", "ar",
         ],
-        "description": "Größtes Whisper-Modell, höchste Genauigkeit",
+        "description": "NVIDIAs 600M-Parameter STT, multilingual",
     },
 }
 
