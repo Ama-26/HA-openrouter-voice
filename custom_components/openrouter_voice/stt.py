@@ -58,7 +58,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
     """OpenRouter STT entity — Multi-Modell mit Retry."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "openrouter_stt"
+    _attr_name = "Speech-to-Text"
     _attr_entity_category = EntityCategory.CONFIG
 
     def __init__(self, config_entry: ConfigEntry) -> None:

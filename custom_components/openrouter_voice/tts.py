@@ -78,7 +78,7 @@ class OpenRouterTTSEntity(TextToSpeechEntity):
     """OpenRouter TTS entity — Multi-Modell mit Retry."""
 
     _attr_has_entity_name = True
-    _attr_translation_key = "openrouter_tts"
+    _attr_name = "Text-to-Speech"
     _attr_entity_category = EntityCategory.CONFIG
     _attr_supported_languages = [
         "de", "en", "fr", "es", "it", "pt", "ja", "ko", "zh",
