@@ -1,24 +1,30 @@
 # OpenRouter Voice
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/hacs/integration)
+[![AI-generated](https://img.shields.io/badge/AI--generated-100%25-blue)](https://github.com/Ama-26/HA-openrouter-voice)
+
+> **⚠️ This integration was created entirely with AI assistance (Claude via Hermes Agent).**
+> All code, documentation, and architecture were generated through iterative AI-human collaboration.
+> Fully functional and production-tested, but keep this in mind when reviewing.
 
 Home Assistant integration for **Text-to-Speech (TTS)** and **Speech-to-Text (STT)** via the [OpenRouter API](https://openrouter.ai).
 
 ## Features
 
-- 🎙️ **TTS** — 3 models: Google Gemini Flash TTS, OpenAI TTS, xAI Grok Voice
-- 🎧 **STT** — 3 models: Deepgram Nova 2, OpenAI Whisper, Whisper Large v3
+- 🎙️ **TTS** — 3 models: Google Gemini Flash, OpenAI GPT-4o Mini, xAI Grok Voice
+- 🎧 **STT** — 3 tiers: 🥇 Best (Deepgram Nova-3), 🥈 Medium (Whisper Large v3), 🥉 Cheap (Qwen3 ASR)
 - 🔁 **Auto-Retry** — Exponential backoff for rate limits and server errors
 - 📊 **Diagnostics** — Request counts, audio bytes, costs
 - ⚙️ **Config Flow** — Full GUI setup, Options flow for model switching
 - 🌍 **Multi-language** — German, English, French, Spanish, Japanese, and more
+- 🎤 **PCM auto-detect** — Handles raw PCM from devices like Voice PE (auto-adds WAV header)
 
 ## Installation
 
 ### HACS (recommended)
 
 1. Open HACS → Integrations → ⋮ → Custom repositories
-2. URL: `https://github.com/Ama-26/openrouter-voice`
+2. URL: `https://github.com/Ama-26/HA-openrouter-voice`
 3. Category: Integration → Add
 4. Install "OpenRouter Voice"
 5. Restart Home Assistant
@@ -27,8 +33,8 @@ Home Assistant integration for **Text-to-Speech (TTS)** and **Speech-to-Text (ST
 
 ```bash
 cd /config/custom_components
-git clone https://github.com/Ama-26/openrouter-voice.git
-mv openrouter-voice/custom_components/openrouter_voice .
+git clone https://github.com/Ama-26/HA-openrouter-voice.git
+mv HA-openrouter-voice/custom_components/openrouter_voice .
 # Restart HA
 ```
 
@@ -50,13 +56,13 @@ mv openrouter-voice/custom_components/openrouter_voice .
 | `openai/gpt-4o-mini-tts-2025-12-15` | alloy, echo, fable, nova, onyx, sage, shimmer | OpenAI's compact TTS |
 | `x-ai/grok-voice-tts-1.0` | male_01, female_01, male_02, female_02 | Expressive xAI TTS |
 
-### STT
+### STT (3 Tiers)
 
-| Model ID | Languages | Notes |
-|---|---|---|
-| `deepgram/nova-3` | de, en, fr, es, it, pt, nl, pl, ru, ja, ko, zh, hi, ar, tr, sv, da, no | Best quality, low latency |
-| `qwen/qwen3-asr-flash-2026-02-10` | de, en, fr, es, it, pt, ja, ko, zh, ru, ar | Cheapest ($0.000035/min) |
-| `nvidia/parakeet-tdt-0.6b-v3` | de, en, fr, es, it, pt, nl, pl, ru, ja, ko, zh, hi, ar | NVIDIA 600M params |
+| Tier | Model ID | Cost | Notes |
+|---|---|---|---|
+| 🥇 Best | `deepgram/nova-3` | $0.0043/min | 30+ languages, highest accuracy |
+| 🥈 Medium | `openai/whisper-large-v3` | $0.0015/min | 99+ languages, proven reliability |
+| 🥉 Cheap | `qwen/qwen3-asr-flash-2026-02-10` | $0.000035/min | 11 languages, 120× cheaper than Nova-3 |
 
 ## Using with Assist
 
