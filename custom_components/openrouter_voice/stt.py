@@ -125,7 +125,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
             audio_chunks.append(chunk)
         wav_data = b"".join(audio_chunks)
 
-        _LOGGER.warning(
+        _LOGGER.debug(
             "STT audio received: %d bytes, metadata: format=%s codec=%s rate=%s bit=%s ch=%s lang=%s",
             len(wav_data),
             metadata.format, metadata.codec, metadata.sample_rate,
@@ -133,7 +133,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
         )
         # Dump first 44 bytes (WAV header) as hex
         if len(wav_data) >= 44:
-            _LOGGER.warning("STT WAV header: %s", wav_data[:44].hex())
+            _LOGGER.debug("STT WAV header: %s", wav_data[:44].hex())
 
         if not wav_data:
             return SpeechResult(None, SpeechResultState.ERROR)
@@ -186,7 +186,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
                 response = await client.post(
                     STT_API_URL,
                     files={"file": ("audio.wav", wav_data, "audio/wav")},
-                    data={"model": model_id, "language": "de"},
+                    data={"model": model_id, "language": metadata.language},
                     headers={
                         "Authorization": f"Bearer {api_key}",
                         "HTTP-Referer": "https://home-assistant.io",
