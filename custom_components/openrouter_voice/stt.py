@@ -157,7 +157,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
             _LOGGER.debug("STT: Added WAV header, total=%d bytes", len(wav_data))
 
         try:
-            text = await self._call_openrouter_stt(wav_data)
+            text = await self._call_openrouter_stt(wav_data, str(metadata.language))
         except HomeAssistantError as exc:
             self._diagnostics["failed_requests"] += 1
             self._diagnostics["last_error"] = str(exc)
@@ -171,7 +171,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
 
         return SpeechResult(text=text, result=SpeechResultState.SUCCESS)
 
-    async def _call_openrouter_stt(self, wav_data: bytes) -> str:
+    async def _call_openrouter_stt(self, wav_data: bytes, language: str) -> str:
         """Send WAV audio to OpenRouter STT API (multipart form data).
 
         Returns transcribed text. Raises HomeAssistantError on failure.
@@ -186,7 +186,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
                 response = await client.post(
                     STT_API_URL,
                     files={"file": ("audio.wav", wav_data, "audio/wav")},
-                    data={"model": model_id, "language": metadata.language},
+                    data={"model": model_id, "language": language},
                     headers={
                         "Authorization": f"Bearer {api_key}",
                         "HTTP-Referer": "https://home-assistant.io",
