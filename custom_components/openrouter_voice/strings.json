@@ -1,0 +1,47 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "OpenRouter Voice",
+        "description": "Get your API key at openrouter.ai/keys.\n\n**TTS models:**\n{tts_models}\n\n**STT models:**\n{stt_models}",
+        "data": {
+          "api_key": "API key",
+          "tts_model": "Text-to-Speech model",
+          "stt_model": "Speech-to-Text model"
+        }
+      },
+      "voice": {
+        "title": "Select voice",
+        "description": "Voices available for **{model}** ({count} found).",
+        "data": {
+          "voice": "Voice"
+        }
+      }
+    },
+    "error": {
+      "invalid_api_key": "The API key must start with `sk-or-`."
+    },
+    "abort": {
+      "already_configured": "OpenRouter Voice is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "OpenRouter Voice options",
+        "data": {
+          "tts_model": "Text-to-Speech model",
+          "voice": "Voice",
+          "stt_model": "Speech-to-Text model"
+        }
+      },
+      "voice": {
+        "title": "Select voice",
+        "description": "Voices available for **{model}** ({count} found).",
+        "data": {
+          "voice": "Voice"
+        }
+      }
+    }
+  }
+}

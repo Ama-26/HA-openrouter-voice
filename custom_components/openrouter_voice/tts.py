@@ -37,6 +37,7 @@ from .const import (
     get_tts_format,
     get_voices_for_model,
 )
+from .voices import async_get_supported_voices
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -69,7 +70,9 @@ async def async_setup_entry(
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
     """Set up OpenRouter TTS entity."""
-    async_add_entities([OpenRouterTTSEntity(config_entry)])
+    entity = OpenRouterTTSEntity(config_entry)
+    await entity.async_load_voices(hass)
+    async_add_entities([entity])
 
 
 # ── TTS Entity ───────────────────────────────────────────────────────────
@@ -90,6 +93,11 @@ class OpenRouterTTSEntity(TextToSpeechEntity):
         """Initialize the TTS entity."""
         self._config_entry = config_entry
         self._attr_unique_id = f"{DOMAIN}_tts_{config_entry.entry_id}"
+        self._voices: list[str] = get_voices_for_model(
+            config_entry.options.get(
+                CONF_TTS_MODEL, config_entry.data.get(CONF_TTS_MODEL, DEFAULT_TTS_MODEL)
+            )
+        )
         self._diagnostics: dict[str, Any] = {
             "total_requests": 0,
             "successful_requests": 0,
@@ -115,10 +123,16 @@ class OpenRouterTTSEntity(TextToSpeechEntity):
             CONF_TTS_MODEL, self._config_entry.data.get(CONF_TTS_MODEL, DEFAULT_TTS_MODEL)
         )
 
+    async def async_load_voices(self, hass: HomeAssistant) -> None:
+        """Stimmen des aktuellen Modells laden (live, mit Fallback)."""
+        self._voices = await async_get_supported_voices(hass, self._current_model)
+
     def async_get_supported_voices(self, language: str) -> list[Voice] | None:
         """Return supported voices for configured model."""
-        voices = get_voices_for_model(self._current_model)
-        return [Voice(voice_id=v, name=v.capitalize()) for v in voices]
+        voices = getattr(self, "_voices", None) or get_voices_for_model(
+            self._current_model
+        )
+        return [Voice(voice_id=v, name=v) for v in voices]
 
     async def _call_openrouter(
         self, message: str, voice: str, model_id: str

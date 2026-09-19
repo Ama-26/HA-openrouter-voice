@@ -52,9 +52,14 @@ mv HA-openrouter-voice/custom_components/openrouter_voice .
 
 | Model ID | Voices | Notes |
 |---|---|---|
-| `google/gemini-3.1-flash-tts-preview` | fenrir, aoede, charon, kore, puck, zephyr | Fast, natural, multilingual |
-| `openai/gpt-4o-mini-tts-2025-12-15` | alloy, echo, fable, nova, onyx, sage, shimmer | OpenAI's compact TTS |
-| `x-ai/grok-voice-tts-1.0` | male_01, female_01, male_02, female_02 | Expressive xAI TTS |
+| `google/gemini-3.1-flash-tts-preview` | 30 voices (Zephyr, Puck, Charon, Kore, Fenrir, …) | Fast, natural, multilingual |
+| `x-ai/grok-voice-tts-1.0` | eve, ara, rex, sal, leo | Expressive xAI TTS |
+| `openai/gpt-4o-mini-tts-2025-12-15` | alloy, echo, fable, nova, onyx, sage, shimmer | ⚠️ Not listed in OpenRouter's current TTS model list |
+
+> **Voice lists are fetched live from the OpenRouter Models API** (`supported_voices`
+> per model, cached for one hour). The lists in `const.py` are only a fallback for
+> when the API can't be reached. When you pick a different TTS model in the
+> options flow, the voice step reloads the matching voices automatically.
 
 ### STT (3 Tiers)
 

@@ -24,7 +24,14 @@ DEFAULT_TTS_VOICE = "fenrir"
 TTS_MODELS: dict[str, dict] = {
     "google/gemini-3.1-flash-tts-preview": {
         "name": "Google Gemini 3.1 Flash TTS",
-        "voices": ["fenrir", "aoede", "charon", "kore", "puck", "zephyr"],
+        # Fallback — die echte Liste kommt live aus der OpenRouter-API (voices.py)
+        "voices": [
+            "Zephyr", "Puck", "Charon", "Kore", "Fenrir", "Leda", "Orus", "Aoede",
+            "Callirrhoe", "Autonoe", "Enceladus", "Iapetus", "Umbriel", "Algieba",
+            "Despina", "Erinome", "Algenib", "Rasalgethi", "Laomedeia", "Achernar",
+            "Alnilam", "Schedar", "Gacrux", "Pulcherrima", "Achird",
+            "Zubenelgenubi", "Vindemiatrix", "Sadachbia", "Sadaltager", "Sulafat",
+        ],
         "format": "pcm",
         "sample_rate": 24000,
         "description": "Schnell, natürlich, mehrsprachig (auch Deutsch)",
@@ -38,7 +45,8 @@ TTS_MODELS: dict[str, dict] = {
     },
     "x-ai/grok-voice-tts-1.0": {
         "name": "xAI Grok Voice TTS",
-        "voices": ["male_01", "female_01", "male_02", "female_02"],
+        # Fallback — echte IDs: eve, ara, rex, sal, leo (live via voices.py)
+        "voices": ["eve", "ara", "rex", "sal", "leo"],
         "format": "pcm",
         "sample_rate": 24000,
         "description": "xAI's Grok Voice — expressive Sprachausgabe",
