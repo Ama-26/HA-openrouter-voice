@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "OpenRouter Voice",
-        "description": "API-Key von openrouter.ai/keys.\n\n**TTS-Modelle:**\n{tts_models}\n\n**STT-Modelle:**\n{stt_models}",
+        "description": "API-Key von openrouter.ai/keys. Die Modell-Listen werden live von OpenRouter geladen (TTS = Modelle mit Audio-Ausgabe, STT = Modelle mit Audio-Eingabe).",
         "data": {
           "api_key": "API-Key",
           "tts_model": "Text-to-Speech-Modell",

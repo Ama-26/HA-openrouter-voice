@@ -3,28 +3,28 @@
     "step": {
       "user": {
         "title": "OpenRouter Voice",
-        "description": "Verbinde mit der OpenRouter API für TTS und STT.\n\n**Verf\u00fcgbare TTS-Modelle:**\n{tts_models}\n\n**Verf\u00fcgbare STT-Modelle:**\n{stt_models}",
+        "description": "Get your API key at openrouter.ai/keys. The model lists are loaded live from OpenRouter (TTS = audio output models, STT = audio input models).",
         "data": {
-          "api_key": "API Key",
-          "tts_model": "TTS Modell",
+          "api_key": "API key",
+          "tts_model": "Text-to-Speech model",
           "voice": "Voice",
-          "stt_model": "STT Modell"
+          "stt_model": "Speech-to-Text model"
         }
       }
     },
     "error": {
-      "invalid_api_key": "Ung\u00fcltiger API-Key. Muss mit 'sk-or-' beginnen."
+      "invalid_api_key": "Invalid API key. Must start with 'sk-or-'."
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "OpenRouter Voice Einstellungen",
-        "description": "Passe TTS- und STT-Modelle an.",
+        "title": "OpenRouter Voice options",
+        "description": "Change TTS and STT models.",
         "data": {
-          "tts_model": "TTS Modell",
+          "tts_model": "Text-to-Speech model",
           "voice": "Voice",
-          "stt_model": "STT Modell"
+          "stt_model": "Speech-to-Text model"
         }
       }
     }

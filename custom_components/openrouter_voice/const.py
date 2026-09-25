@@ -16,7 +16,8 @@ DEFAULT_TIMEOUT = 30
 MAX_RETRIES = 3
 RETRY_BACKOFF = 2.0
 
-# ── TTS Models ───────────────────────────────────────────────────────────
+# ── TTS Models (Fallback-Katalog — der Config-/Options-Flow lädt die
+#    Modell-Liste live aus der OpenRouter-Models-API, siehe models.py) ───────
 
 DEFAULT_TTS_MODEL = "google/gemini-3.1-flash-tts-preview"
 DEFAULT_TTS_VOICE = "fenrir"
@@ -53,7 +54,7 @@ TTS_MODELS: dict[str, dict] = {
     },
 }
 
-# ── STT Models (Three tiers: good / medium / cheap) ──────────────────────
+# ── STT Models (Fallback-Katalog, siehe models.py) ───────────────────────
 
 DEFAULT_STT_MODEL = "qwen/qwen3-asr-flash-2026-02-10"  # Default = günstig
 

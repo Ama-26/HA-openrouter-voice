@@ -1,8 +1,9 @@
 """Config flow for OpenRouter Voice — API-Key + TTS + STT Modelle.
 
-Die Stimmen-Listen kommen live von der OpenRouter-API (siehe ``voices.py``),
-damit die Auswahl auch nach Modell- oder Stimmen-Änderungen beim Provider
-stimmt. Die Listen in ``const.TTS_MODELS`` dienen nur als Fallback.
+Die Modell- und Stimmen-Listen kommen live von der OpenRouter-Models-API
+(``models.py`` / ``voices.py``), damit die Auswahl immer den aktuellen Stand
+des Providers widerspiegelt. Die Kataloge in ``const.py`` dienen nur als
+Fallback, falls die API nicht erreichbar ist.
 """
 
 from homeassistant import config_entries
@@ -18,24 +19,24 @@ from .const import (
     DEFAULT_TTS_MODEL,
     DEFAULT_TTS_VOICE,
     DOMAIN,
-    STT_MODELS,
-    TTS_MODELS,
 )
+from .models import async_get_stt_model_options, async_get_tts_model_options
 from .voices import async_get_supported_voices
 
-TTS_MODEL_OPTIONS = {mid: cfg["name"] for mid, cfg in TTS_MODELS.items()}
-STT_MODEL_OPTIONS = {mid: cfg["name"] for mid, cfg in STT_MODELS.items()}
 
-
-def _model_choices_schema() -> dict:
-    return {
-        vol.Required(CONF_TTS_MODEL, default=DEFAULT_TTS_MODEL): vol.In(
-            TTS_MODEL_OPTIONS
-        ),
-        vol.Required(CONF_STT_MODEL, default=DEFAULT_STT_MODEL): vol.In(
-            STT_MODEL_OPTIONS
-        ),
-    }
+def _model_schema(
+    tts_options: dict[str, str],
+    stt_options: dict[str, str],
+    tts_default: str,
+    stt_default: str,
+) -> vol.Schema:
+    """Schema mit dynamischen Modell-Dropdowns (aktuelle Werte garantiert enthalten)."""
+    return vol.Schema(
+        {
+            vol.Required(CONF_TTS_MODEL, default=tts_default): vol.In(tts_options),
+            vol.Required(CONF_STT_MODEL, default=stt_default): vol.In(stt_options),
+        }
+    )
 
 
 def _voice_schema(voices: list[str], default: str | None = None) -> vol.Schema:
@@ -52,9 +53,19 @@ class OpenRouterVoiceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self) -> None:
         self._api_key: str | None = None
         self._pending: dict = {}
+        self._tts_options: dict[str, str] = {}
 
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         errors: dict[str, str] = {}
+
+        tts_options = await async_get_tts_model_options(
+            self.hass, ensure_ids=(DEFAULT_TTS_MODEL,)
+        )
+        stt_options = await async_get_stt_model_options(
+            self.hass, ensure_ids=(DEFAULT_STT_MODEL,)
+        )
+
+        self._tts_options = tts_options
 
         if user_input is not None:
             api_key = user_input[CONF_API_KEY]
@@ -73,18 +84,12 @@ class OpenRouterVoiceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY): str,
-                    **_model_choices_schema(),
+                    **_model_schema(
+                        tts_options, stt_options, DEFAULT_TTS_MODEL, DEFAULT_STT_MODEL
+                    ).schema,
                 }
             ),
             errors=errors,
-            description_placeholders={
-                "tts_models": "\n".join(
-                    f"• `{mid}` — {c['description']}" for mid, c in TTS_MODELS.items()
-                ),
-                "stt_models": "\n".join(
-                    f"• `{mid}` — {c['description']}" for mid, c in STT_MODELS.items()
-                ),
-            },
         )
 
     async def async_step_voice(self, user_input: dict | None = None) -> FlowResult:
@@ -111,7 +116,7 @@ class OpenRouterVoiceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="voice",
             data_schema=_voice_schema(voices),
             description_placeholders={
-                "model": TTS_MODEL_OPTIONS.get(model_id, model_id),
+                "model": self._tts_options.get(model_id, model_id),
                 "count": str(len(voices)),
             },
         )
@@ -128,6 +133,7 @@ class OpenRouterVoiceOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self) -> None:
         self._pending: dict = {}
+        self._tts_options: dict[str, str] = {}
 
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         current_tts = self.config_entry.options.get(
@@ -139,6 +145,14 @@ class OpenRouterVoiceOptionsFlow(config_entries.OptionsFlow):
         current_voice = self.config_entry.options.get(
             CONF_VOICE, self.config_entry.data.get(CONF_VOICE, DEFAULT_TTS_VOICE)
         )
+
+        tts_options = await async_get_tts_model_options(
+            self.hass, ensure_ids=(current_tts, DEFAULT_TTS_MODEL)
+        )
+        stt_options = await async_get_stt_model_options(
+            self.hass, ensure_ids=(current_stt, DEFAULT_STT_MODEL)
+        )
+        self._tts_options = tts_options
 
         if user_input is not None:
             new_tts = user_input[CONF_TTS_MODEL]
@@ -159,14 +173,14 @@ class OpenRouterVoiceOptionsFlow(config_entries.OptionsFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_TTS_MODEL, default=current_tts): vol.In(
-                        TTS_MODEL_OPTIONS
+                        tts_options
                     ),
                     vol.Optional(
                         CONF_VOICE,
                         default=current_voice if current_voice in voices else voices[0],
                     ): vol.In(voices),
                     vol.Required(CONF_STT_MODEL, default=current_stt): vol.In(
-                        STT_MODEL_OPTIONS
+                        stt_options
                     ),
                 }
             ),
@@ -185,7 +199,7 @@ class OpenRouterVoiceOptionsFlow(config_entries.OptionsFlow):
             step_id="voice",
             data_schema=_voice_schema(voices),
             description_placeholders={
-                "model": TTS_MODEL_OPTIONS.get(model_id, model_id),
+                "model": self._tts_options.get(model_id, model_id),
                 "count": str(len(voices)),
             },
         )
