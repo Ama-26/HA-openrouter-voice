@@ -134,6 +134,7 @@ class OpenRouterVoiceOptionsFlow(config_entries.OptionsFlow):
     def __init__(self) -> None:
         self._pending: dict = {}
         self._tts_options: dict[str, str] = {}
+        self._current_voice: str | None = None
 
     async def async_step_init(self, user_input: dict | None = None) -> FlowResult:
         current_tts = self.config_entry.options.get(
@@ -142,7 +143,7 @@ class OpenRouterVoiceOptionsFlow(config_entries.OptionsFlow):
         current_stt = self.config_entry.options.get(
             CONF_STT_MODEL, self.config_entry.data.get(CONF_STT_MODEL, DEFAULT_STT_MODEL)
         )
-        current_voice = self.config_entry.options.get(
+        self._current_voice = self.config_entry.options.get(
             CONF_VOICE, self.config_entry.data.get(CONF_VOICE, DEFAULT_TTS_VOICE)
         )
 
@@ -155,18 +156,15 @@ class OpenRouterVoiceOptionsFlow(config_entries.OptionsFlow):
         self._tts_options = tts_options
 
         if user_input is not None:
-            new_tts = user_input[CONF_TTS_MODEL]
             self._pending = {
-                CONF_TTS_MODEL: new_tts,
+                CONF_TTS_MODEL: user_input[CONF_TTS_MODEL],
                 CONF_STT_MODEL: user_input.get(CONF_STT_MODEL, current_stt),
             }
-            # Modell gewechselt → Stimmen des neuen Modells abfragen
-            if new_tts != current_tts:
-                return await self.async_step_voice()
-            self._pending[CONF_VOICE] = user_input.get(CONF_VOICE, current_voice)
-            return self.async_create_entry(title="", data=self._pending)
-
-        voices = await async_get_supported_voices(self.hass, current_tts)
+            # Stimmen IMMER im zweiten Schritt — so passt die Liste garantiert
+            # zum gewählten Modell (ein Live-Update innerhalb der Maske gibt
+            # es in HA-Flows nicht, das alte Inline-Dropdown zeigte die
+            # Stimmen des VORHERigen Modells).
+            return await self.async_step_voice()
 
         return self.async_show_form(
             step_id="init",
@@ -175,10 +173,6 @@ class OpenRouterVoiceOptionsFlow(config_entries.OptionsFlow):
                     vol.Required(CONF_TTS_MODEL, default=current_tts): vol.In(
                         tts_options
                     ),
-                    vol.Optional(
-                        CONF_VOICE,
-                        default=current_voice if current_voice in voices else voices[0],
-                    ): vol.In(voices),
                     vol.Required(CONF_STT_MODEL, default=current_stt): vol.In(
                         stt_options
                     ),
@@ -187,7 +181,7 @@ class OpenRouterVoiceOptionsFlow(config_entries.OptionsFlow):
         )
 
     async def async_step_voice(self, user_input: dict | None = None) -> FlowResult:
-        """Zweiter Schritt nach Modellwechsel: Stimme neu wählen."""
+        """Zweiter Schritt: Stimme passend zum gewählten Modell."""
         model_id = self._pending.get(CONF_TTS_MODEL, DEFAULT_TTS_MODEL)
         voices = await async_get_supported_voices(self.hass, model_id)
 
@@ -197,7 +191,7 @@ class OpenRouterVoiceOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="voice",
-            data_schema=_voice_schema(voices),
+            data_schema=_voice_schema(voices, self._current_voice),
             description_placeholders={
                 "model": self._tts_options.get(model_id, model_id),
                 "count": str(len(voices)),

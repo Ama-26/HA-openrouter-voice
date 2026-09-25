@@ -31,7 +31,6 @@
         "title": "OpenRouter Voice options",
         "data": {
           "tts_model": "Text-to-Speech model",
-          "voice": "Voice",
           "stt_model": "Speech-to-Text model"
         }
       },
