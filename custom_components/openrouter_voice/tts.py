@@ -29,6 +29,9 @@ from .const import (
     DEFAULT_TTS_VOICE,
     DOMAIN,
     MAX_RETRIES,
+    MAX_429_RETRIES,
+    MAX_TTS_AUDIO_BYTES,
+    MAX_TTS_INPUT_CHARS,
     RETRY_BACKOFF,
     TTS_API_URL,
     TTS_MODELS,
@@ -141,6 +144,7 @@ class OpenRouterTTSEntity(TextToSpeechEntity):
         client = get_async_client(self.hass)
         response_format = get_tts_format(model_id)
         last_error: Exception | None = None
+        rl_retries = 0  # 429 retries so far (audit F-5: max 1)
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
@@ -162,6 +166,13 @@ class OpenRouterTTSEntity(TextToSpeechEntity):
                 )
 
                 if response.status_code == 200:
+                    # Body cap (audit F-2): refuse oversized audio before
+                    # reading it into memory
+                    cl = response.headers.get("content-length")
+                    if cl and cl.isdigit() and int(cl) > MAX_TTS_AUDIO_BYTES:
+                        raise HomeAssistantError(
+                            f"TTS response too large ({cl} bytes)"
+                        )
                     pcm_data = response.content
                     if not pcm_data or len(pcm_data) < 50:
                         raise HomeAssistantError(
@@ -184,7 +195,20 @@ class OpenRouterTTSEntity(TextToSpeechEntity):
 
                 if response.status_code in (429,) or response.status_code >= 500:
                     if attempt < MAX_RETRIES:
-                        wait = RETRY_BACKOFF * (2 ** (attempt - 1))
+                        # Rate-limit handling (audit F-5): honor Retry-After,
+                        # at most MAX_429_RETRIES retries for 429
+                        if response.status_code == 429:
+                            if rl_retries >= MAX_429_RETRIES:
+                                raise HomeAssistantError(str(tts_err))
+                            rl_retries += 1
+                            ra = response.headers.get("retry-after", "")
+                            wait = (
+                                min(float(ra), 60.0)
+                                if ra.replace(".", "", 1).isdigit()
+                                else RETRY_BACKOFF * (2 ** (attempt - 1))
+                            )
+                        else:
+                            wait = RETRY_BACKOFF * (2 ** (attempt - 1))
                         _LOGGER.warning(
                             "TTS %s (attempt %d/%d), retry %.1fs",
                             tts_err, attempt, MAX_RETRIES, wait,
@@ -235,10 +259,21 @@ class OpenRouterTTSEntity(TextToSpeechEntity):
         model_id = self._current_model
         sample_rate = get_sample_rate(model_id)
 
+        # Sanity cap on spoken text (audit F-7): pipeline content can be
+        # arbitrarily long; beyond the cap we truncate rather than burn
+        # API cost on a response that would be cut off mid-playback anyway.
+        if len(message) > MAX_TTS_INPUT_CHARS:
+            _LOGGER.warning(
+                "TTS input truncated: %d > %d chars",
+                len(message), MAX_TTS_INPUT_CHARS,
+            )
+            message = message[:MAX_TTS_INPUT_CHARS]
+
         self._diagnostics["total_requests"] += 1
         t0 = time.time()
 
-        _LOGGER.debug("TTS: %s (model=%s, voice=%s)", message[:50], model_id, voice)
+        # No message content in logs (audit F-3: speech content is sensitive)
+        _LOGGER.debug("TTS: %d chars (model=%s, voice=%s)", len(message), model_id, voice)
 
         try:
             pcm_data = await self._call_openrouter(message, voice, model_id)

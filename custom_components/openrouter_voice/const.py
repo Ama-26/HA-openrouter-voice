@@ -15,6 +15,13 @@ STT_API_URL = "https://openrouter.ai/api/v1/audio/transcriptions"
 DEFAULT_TIMEOUT = 30
 MAX_RETRIES = 3
 RETRY_BACKOFF = 2.0
+# Hard resource limits (security-audit F-1/F-2/F-7)
+MAX_STT_AUDIO_BYTES = 10 * 1024 * 1024   # 10 MB uploaded audio
+MAX_TTS_AUDIO_BYTES = 20 * 1024 * 1024   # 20 MB received audio
+MAX_RESPONSE_JSON_BYTES = 2 * 1024 * 1024  # 2 MB received JSON
+MAX_TTS_INPUT_CHARS = 4096               # sanity cap for spoken text
+# 429: at most one retry (audit F-5), honoring Retry-After
+MAX_429_RETRIES = 1
 
 # ── TTS Models (Fallback-Katalog — der Config-/Options-Flow lädt die
 #    Modell-Liste live aus der OpenRouter-Models-API, siehe models.py) ───────
@@ -140,7 +147,9 @@ class TimeoutError_(VoiceError):
 
 def classify_error(http_status: int, response_body: str = "") -> VoiceError:
     """Klassifiziert einen HTTP-Fehler."""
-    msg = response_body[:200] if response_body else f"HTTP {http_status}"
+    # Provider-controlled text (audit F-6): strip control characters,
+    # collapse whitespace, hard length cap before it reaches HA UI/log.
+    msg = " ".join(str(response_body).split())[:160] if response_body else f"HTTP {http_status}"
 
     if http_status == 401:
         return AuthError(

@@ -12,6 +12,9 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN, STT_MODELS, TTS_MODELS
 
 REDACT = {CONF_API_KEY}
+# Entity attributes are whitelisted (audit F-4: attributes could carry
+# provider-controlled or configuration data in future HA versions)
+ENTITY_ATTR_WHITELIST = {"friendly_name", "supported_formats", "entity_picture"}
 
 
 async def async_get_config_entry_diagnostics(
@@ -23,14 +26,18 @@ async def async_get_config_entry_diagnostics(
         if state.entity_id.startswith(("tts.openrouter", "stt.openrouter")):
             entities[state.entity_id] = {
                 "state": state.state,
-                "attributes": state.attributes,
+                "attributes": {
+                    k: v
+                    for k, v in state.attributes.items()
+                    if k in ENTITY_ATTR_WHITELIST
+                },
             }
 
     return async_redact_data(
         {
             "entry_id": config_entry.entry_id,
             "data": async_redact_data(config_entry.data, REDACT),
-            "options": config_entry.options,
+            "options": async_redact_data(config_entry.options, REDACT),
             "version": config_entry.version,
             "tts_models": {
                 mid: {"name": c["name"], "voices": c["voices"], "format": c["format"]}

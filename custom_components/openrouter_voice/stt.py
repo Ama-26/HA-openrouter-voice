@@ -35,6 +35,9 @@ from .const import (
     DEFAULT_TIMEOUT,
     DOMAIN,
     MAX_RETRIES,
+    MAX_429_RETRIES,
+    MAX_RESPONSE_JSON_BYTES,
+    MAX_STT_AUDIO_BYTES,
     RETRY_BACKOFF,
     STT_API_URL,
     STT_MODELS,
@@ -119,9 +122,18 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
         self._diagnostics["total_requests"] += 1
         t0 = time.time()
 
-        # Collect streaming audio chunks into single bytes
+        # Collect streaming audio chunks into single bytes, hard-capped
+        # (security-audit F-1: runaway pipeline producer must not eat RAM)
         audio_chunks: list[bytes] = []
+        total = 0
         async for chunk in stream:
+            total += len(chunk)
+            if total > MAX_STT_AUDIO_BYTES:
+                _LOGGER.warning(
+                    "STT audio exceeds %d MB cap (%d bytes) — aborting turn",
+                    MAX_STT_AUDIO_BYTES // (1024 * 1024), total,
+                )
+                return SpeechResult(None, SpeechResultState.ERROR)
             audio_chunks.append(chunk)
         wav_data = b"".join(audio_chunks)
 
@@ -131,9 +143,8 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
             metadata.format, metadata.codec, metadata.sample_rate,
             metadata.bit_rate, metadata.channel, metadata.language,
         )
-        # Dump first 44 bytes (WAV header) as hex
-        if len(wav_data) >= 44:
-            _LOGGER.debug("STT WAV header: %s", wav_data[:44].hex())
+        # No header hexdump / transcript logging (audit F-3: speech content
+        # is sensitive data; keep DEBUG logs content-free)
 
         if not wav_data:
             return SpeechResult(None, SpeechResultState.ERROR)
@@ -167,7 +178,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
 
         duration = time.time() - t0
         self._diagnostics["successful_requests"] += 1
-        _LOGGER.debug("STT OK: %.1fs → '%s'", duration, text[:80])
+        _LOGGER.debug("STT OK: %.1fs, %d bytes audio", duration, len(wav_data))
 
         return SpeechResult(text=text, result=SpeechResultState.SUCCESS)
 
@@ -180,6 +191,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
         api_key: str = self._config_entry.data[CONF_API_KEY]
         model_id = self._stt_model
         last_error: Exception | None = None
+        rl_retries = 0  # 429 retries so far (audit F-5: max 1)
 
         for attempt in range(1, MAX_RETRIES + 1):
             try:
@@ -196,6 +208,13 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
                 )
 
                 if response.status_code == 200:
+                    # Body cap (audit F-2): refuse oversized responses before
+                    # reading them into memory
+                    cl = response.headers.get("content-length")
+                    if cl and cl.isdigit() and int(cl) > MAX_RESPONSE_JSON_BYTES:
+                        raise HomeAssistantError(
+                            f"STT response too large ({cl} bytes)"
+                        )
                     result = response.json()
                     text: str = result.get("text", "").strip()
                     usage = result.get("usage", {})
@@ -220,7 +239,22 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
 
                 if response.status_code in (429,) or response.status_code >= 500:
                     if attempt < MAX_RETRIES:
-                        wait = RETRY_BACKOFF * (2 ** (attempt - 1))
+                        # Rate-limit handling (audit F-5): honor Retry-After,
+                        # at most MAX_429_RETRIES retries for 429 — repeated
+                        # re-uploads of the full audio only deepen the rate
+                        # limit and multiply cost.
+                        if response.status_code == 429:
+                            if rl_retries >= MAX_429_RETRIES:
+                                raise HomeAssistantError(str(voice_err))
+                            rl_retries += 1
+                            ra = response.headers.get("retry-after", "")
+                            wait = (
+                                min(float(ra), 60.0)
+                                if ra.replace(".", "", 1).isdigit()
+                                else RETRY_BACKOFF * (2 ** (attempt - 1))
+                            )
+                        else:
+                            wait = RETRY_BACKOFF * (2 ** (attempt - 1))
                         _LOGGER.warning(
                             "STT %s (attempt %d/%d), retry %.1fs",
                             voice_err, attempt, MAX_RETRIES, wait,

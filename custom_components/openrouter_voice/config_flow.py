@@ -68,7 +68,7 @@ class OpenRouterVoiceConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._tts_options = tts_options
 
         if user_input is not None:
-            api_key = user_input[CONF_API_KEY]
+            api_key = user_input[CONF_API_KEY].strip()
             if not api_key.startswith("sk-or-"):
                 errors["api_key"] = "invalid_api_key"
             else:
