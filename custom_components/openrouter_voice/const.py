@@ -147,9 +147,14 @@ class TimeoutError_(VoiceError):
 
 def classify_error(http_status: int, response_body: str = "") -> VoiceError:
     """Klassifiziert einen HTTP-Fehler."""
-    # Provider-controlled text (audit F-6): strip control characters,
+    # Provider-controlled text (audit F-6): strip control characters
+    # (incl. ANSI escapes \x00–\x1f, so log-injection/Farb-Codes sterben),
     # collapse whitespace, hard length cap before it reaches HA UI/log.
-    msg = " ".join(str(response_body).split())[:160] if response_body else f"HTTP {http_status}"
+    msg = " ".join(
+        ch if not (ord(ch) < 32 and not ch.isspace()) else ""
+        for ch in str(response_body)
+    ).split()
+    msg = " ".join(msg)[:160] if response_body else f"HTTP {http_status}"
 
     if http_status == 401:
         return AuthError(

@@ -133,6 +133,7 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
                     "STT audio exceeds %d MB cap (%d bytes) — aborting turn",
                     MAX_STT_AUDIO_BYTES // (1024 * 1024), total,
                 )
+                self._diagnostics["failed_requests"] += 1
                 return SpeechResult(None, SpeechResultState.ERROR)
             audio_chunks.append(chunk)
         wav_data = b"".join(audio_chunks)
@@ -225,7 +226,6 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
                     return text if text else ""
 
                 # ── Error handling ──────────────────────────────────────
-                _LOGGER.error("STT API %d response: %s", response.status_code, response.text[:500])
                 try:
                     err_body = response.json()
                     err_msg = err_body.get("error", {}).get("message", response.text[:200])
@@ -233,6 +233,9 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
                     err_msg = response.text[:200]
 
                 voice_err = classify_error(response.status_code, err_msg)
+                # Provider-controlled text (audit F-6): log the sanitized
+                # classifier message, never the raw response body
+                _LOGGER.error("STT API %d response: %s", response.status_code, str(voice_err))
 
                 if response.status_code in (401, 403, 400):
                     raise HomeAssistantError(str(voice_err))
