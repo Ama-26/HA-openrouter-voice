@@ -167,7 +167,9 @@ class OpenRouterTTSEntity(TextToSpeechEntity):
 
                 if response.status_code == 200:
                     # Body cap (audit F-2): refuse oversized audio before
-                    # reading it into memory
+                    # reading it into memory. Note: chunked responses
+                    # without Content-Length bypass this check — accepted
+                    # residual risk (TLS to fixed openrouter.ai endpoint).
                     cl = response.headers.get("content-length")
                     if cl and cl.isdigit() and int(cl) > MAX_TTS_AUDIO_BYTES:
                         raise HomeAssistantError(

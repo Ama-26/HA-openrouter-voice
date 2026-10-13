@@ -210,7 +210,9 @@ class OpenRouterSTTEntity(SpeechToTextEntity):
 
                 if response.status_code == 200:
                     # Body cap (audit F-2): refuse oversized responses before
-                    # reading them into memory
+                    # reading them into memory. Note: chunked responses
+                    # without Content-Length bypass this check — accepted
+                    # residual risk (TLS to fixed openrouter.ai endpoint).
                     cl = response.headers.get("content-length")
                     if cl and cl.isdigit() and int(cl) > MAX_RESPONSE_JSON_BYTES:
                         raise HomeAssistantError(
